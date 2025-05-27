@@ -1,0 +1,30 @@
+# .github/workflows/cleanup.yml
+name: Cleanup
+
+on:
+  schedule:
+    - cron: '0 3 * * 0' # Every Sunday at 3 AM
+  workflow_dispatch:
+
+jobs:
+  cleanup-artifacts:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Delete old workflow runs
+      uses: Mattraks/delete-workflow-runs@v2
+      with:
+        token: ${{ github.token }}
+        repository: ${{ github.repository }}
+        retain_days: 30
+        keep_minimum_runs: 10
+
+  cleanup-packages:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Delete old container images
+      uses: actions/delete-package-versions@v4
+      with:
+        package-name: ${{ github.event.repository.name }}
+        package-type: 'container'
+        min-versions-to-keep: 10
+        delete-only-untagged-versions: 'true'

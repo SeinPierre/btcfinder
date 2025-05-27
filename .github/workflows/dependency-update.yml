@@ -1,0 +1,65 @@
+
+# .github/workflows/dependency-update.yml
+name: Dependency Update
+
+on:
+  schedule:
+    - cron: '0 2 * * 1' # Every Monday at 2 AM
+  workflow_dispatch:
+
+jobs:
+  update-rust-dependencies:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Install cargo-edit
+      run: cargo install cargo-edit
+
+    - name: Update dependencies
+      run: cargo upgrade
+
+    - name: Run tests
+      run: cargo test
+
+    - name: Create Pull Request
+      uses: peter-evans/create-pull-request@v5
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: 'chore: update Rust dependencies'
+        title: 'chore: update Rust dependencies'
+        body: |
+          Automated dependency updates:
+          - Updated Rust dependencies to latest versions
+          - All tests passing
+        branch: update-rust-dependencies
+
+  update-terraform-providers:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+
+    - name: Terraform Init and Upgrade
+      run: |
+        terraform init -upgrade
+        terraform providers lock -platform=linux_amd64 -platform=darwin_amd64 -platform=windows_amd64
+
+    - name: Create Pull Request
+      uses: peter-evans/create-pull-request@v5
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: 'chore: update Terraform providers'
+        title: 'chore: update Terraform providers'
+        body: |
+          Automated Terraform provider updates:
+          - Updated provider versions
+          - Regenerated lock file
+        branch: update-terraform-providers

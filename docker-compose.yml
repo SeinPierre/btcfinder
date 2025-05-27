@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  bitcoin-matcher:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - RUST_LOG=info
+      - BUCKET_NAME=your-bucket-name
+      - AWS_DEFAULT_REGION=us-east-1
+      - THREADS=4
+      - BATCH_SIZE=1000
+      - NETWORK=mainnet
+      - REPORT_INTERVAL=30
+    volumes:
+      # Mount AWS credentials for local development
+      - ~/.aws:/home/appuser/.aws:ro
+      # Mount a local directory for found addresses
+      - ./output:/app/output
+    restart: unless-stopped
+    
+  # Optional: LocalStack for S3 simulation during development
+  localstack:
+    image: localstack/localstack:latest
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=s3
+      - DEBUG=1
+      - DATA_DIR=/tmp/localstack/data
+    volumes:
+      - "./localstack:/tmp/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"

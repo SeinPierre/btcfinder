@@ -1,0 +1,58 @@
+
+# .github/workflows/security.yml
+name: Security Scan
+
+on:
+  schedule:
+    - cron: '0 4 * * 1' # Every Monday at 4 AM
+  workflow_dispatch:
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Run Bandit (Python security linter)
+      uses: tj-actions/bandit@v5.1
+      if: hashFiles('**/*.py') != ''
+      with:
+        options: "-r . -f json -o bandit-report.json"
+
+    - name: Run Semgrep
+      uses: returntocorp/semgrep-action@v1
+      with:
+        config: >-
+          p/security-audit
+          p/secrets
+          p/ci
+        generateSarif: "1"
+
+    - name: Upload SARIF file
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: semgrep.sarif
+      if: always()
+
+  dependency-scan:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Run cargo audit
+      run: |
+        cargo install cargo-audit
+        cargo audit --json > cargo-audit.json
+
+    - name: Upload audit results
+      uses: actions/upload-artifact@v4
+      with:
+        name: cargo-audit-results
+        path: cargo-audit.json
